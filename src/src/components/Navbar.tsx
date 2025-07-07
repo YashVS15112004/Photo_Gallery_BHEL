@@ -20,6 +20,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import ChangePasswordDialog from './ChangePasswordDialog';
 
 const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout, openLoginModal } = useAuth();
@@ -33,6 +34,7 @@ const Navbar: React.FC = () => {
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(null);
+  const [changePwdOpen, setChangePwdOpen] = useState(false);
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -105,7 +107,6 @@ const Navbar: React.FC = () => {
               cursor: 'pointer',
               fontWeight: 600,
             }}
-            onClick={() => navigate('/')}
           >
             Photo Gallery BHEL
           </Typography>
@@ -143,9 +144,6 @@ const Navbar: React.FC = () => {
                       <MenuItem key="upload" onClick={handleUpload}>
                         Upload Photos
                       </MenuItem>,
-                      <MenuItem key="admin" onClick={handleAdmin}>
-                        Admin Dashboard
-                      </MenuItem>,
                     ] : []),
                     <MenuItem key="profile" onClick={handleProfileMenuOpen}>
                       Profile
@@ -174,16 +172,6 @@ const Navbar: React.FC = () => {
                           sx={{ fontWeight: 500 }}
                         >
                           Upload Photos
-                        </Button>
-                      </motion.div>
-                      
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button
-                          color="inherit"
-                          onClick={handleAdmin}
-                          sx={{ fontWeight: 500 }}
-                        >
-                          Admin
                         </Button>
                       </motion.div>
                     </>
@@ -235,8 +223,10 @@ const Navbar: React.FC = () => {
             <MenuItem disabled>
               {user?.username} ({user?.role})
             </MenuItem>
+            <MenuItem onClick={() => { setChangePwdOpen(true); handleMenuClose(); }}>Change Password</MenuItem>
             <MenuItem onClick={handleLogout}>Logout</MenuItem>
           </Menu>
+          <ChangePasswordDialog open={changePwdOpen} onClose={() => setChangePwdOpen(false)} />
         </Toolbar>
       </AppBar>
     </motion.div>

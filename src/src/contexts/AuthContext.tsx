@@ -40,11 +40,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
+  // Remove auto-login, but set isLoading to false on mount
+  React.useEffect(() => {
+    checkAuth();
+    // eslint-disable-next-line
+  }, []);
+
   const checkAuth = async () => {
-    // Always clear authentication on page load/refresh
-    localStorage.removeItem('token');
-    setUser(null);
-    setIsLoading(false);
+    setIsLoading(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+    try {
+      const response = await api.get('/auth/me');
+      setUser(response.data.user);
+    } catch (error) {
+      localStorage.removeItem('token');
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const login = async (username: string, password: string): Promise<boolean> => {
@@ -75,11 +93,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const closeLoginModal = () => {
     setLoginModalOpen(false);
   };
-
-  useEffect(() => {
-    // Check authentication on page load
-    checkAuth();
-  }, []);
 
   const value: AuthContextType = {
     user,

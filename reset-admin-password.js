@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const readline = require('readline');
@@ -27,30 +25,25 @@ async function main() {
   await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
   console.log('✅ Connected to MongoDB');
 
-  rl.question('Admin username: ', async (username) => {
-    rl.question('Admin email: ', async (email) => {
-      rl.question('Admin password: ', async (password) => {
-        try {
-          const hash = await bcrypt.hash(password, 12);
-          const user = new User({
-            username,
-            email,
-            password: hash,
-            isAuthorized: true,
-            role: 'admin'
-          });
-          await user.save();
-          console.log('✅ Admin user created successfully!');
-        } catch (err) {
-          if (err.code === 11000) {
-            console.log('❌ Username or email already exists.');
-          } else {
-            console.error('❌ Error creating admin user:', err.message);
-          }
+  rl.question('Admin username to reset: ', async (username) => {
+    rl.question('New password: ', async (password) => {
+      try {
+        const hash = await bcrypt.hash(password, 12);
+        const user = await User.findOneAndUpdate(
+          { username, role: 'admin' },
+          { $set: { password: hash } },
+          { new: true }
+        );
+        if (user) {
+          console.log('✅ Admin password reset successfully!');
+        } else {
+          console.log('❌ Admin user not found.');
         }
-        mongoose.disconnect();
-        rl.close();
-      });
+      } catch (err) {
+        console.error('❌ Error resetting password:', err.message);
+      }
+      mongoose.disconnect();
+      rl.close();
     });
   });
 }

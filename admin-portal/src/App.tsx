@@ -1,39 +1,56 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Box } from '@mui/material';
-import { AuthProvider } from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import AdminLayout from './components/AdminLayout';
-import LoginPage from './components/LoginPage';
-import Dashboard from './components/Dashboard';
-import UserManagement from './components/UserManagement';
-import AlbumManagement from './components/AlbumManagement';
-import SystemStats from './components/SystemStats';
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './hooks/useAuth'
+import { Layout } from './components/Layout'
+import { LoginForm } from './components/LoginForm'
+import { Users } from './pages/Users'
+import { Albums } from './pages/Albums'
+import { ActivityLogs } from './pages/ActivityLogs'
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/admin-portal/login" replace />
+  }
+
+  return <>{children}</>
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/admin-portal/login" element={<LoginForm />} />
+      <Route
+        path="/admin-portal"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="users" element={<Users />} />
+        <Route path="albums" element={<Albums />} />
+        <Route path="logs" element={<ActivityLogs />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/admin-portal" replace />} />
+    </Routes>
+  )
+}
 
 function App() {
   return (
     <AuthProvider>
-      <Box className="admin-dashboard">
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route 
-            path="/" 
-            element={
-              <ProtectedRoute>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="albums" element={<AlbumManagement />} />
-            <Route path="stats" element={<SystemStats />} />
-          </Route>
-        </Routes>
-      </Box>
+      <AppRoutes />
     </AuthProvider>
-  );
+  )
 }
 
-export default App; 
+export default App 

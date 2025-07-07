@@ -74,6 +74,14 @@ const PhotoGallery: React.FC = () => {
   });
   const [showHiddenAlbums, setShowHiddenAlbums] = useState(false);
 
+  // Add pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Calculate paginated albums
+  const paginatedAlbums = albums ? albums.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage) : [];
+  const totalPages = albums ? Math.ceil(albums.length / itemsPerPage) : 1;
+
   const handleAlbumClick = (albumId: string) => {
     navigate(`/album/${albumId}`);
   };
@@ -385,7 +393,8 @@ const PhotoGallery: React.FC = () => {
     );
   }
 
-  const visibleAlbums = albums.filter(album => !album.isHidden);
+  // Filter out albums with 0 images and hidden albums for main gallery
+  const visibleAlbums = albums.filter(album => album.images && album.images.length > 0 && !album.isHidden);
   const hiddenAlbums = albums.filter(album => album.isHidden);
   const displayedAlbums = showHiddenAlbums ? hiddenAlbums : visibleAlbums;
 
@@ -443,7 +452,7 @@ const PhotoGallery: React.FC = () => {
                   </TableHead>
                   <TableBody>
                     <AnimatePresence>
-                      {displayedAlbums.map((album, index) => (
+                      {paginatedAlbums.map((album, index) => (
                         <motion.tr
                           key={album._id}
                           variants={itemVariants}
@@ -554,7 +563,7 @@ const PhotoGallery: React.FC = () => {
               width: '100%'
             }}>
               <AnimatePresence>
-                {displayedAlbums.map((album, index) => {
+                {paginatedAlbums.map((album, index) => {
                   // Determine thumbnail image
                   let thumbnail = album.thumbnail?.path;
                   if (!thumbnail && album.images && album.images.length > 0) {
@@ -653,6 +662,25 @@ const PhotoGallery: React.FC = () => {
           )
         )}
       </Container>
+
+      {/* Add pagination controls below the album list */}
+      <Box display="flex" justifyContent="center" alignItems="center" mt={4}>
+        <button
+          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+        >
+          {'<'}
+        </button>
+        <span className="mx-2 text-sm">Page {currentPage} of {totalPages}</span>
+        <button
+          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+        >
+          {'>'}
+        </button>
+      </Box>
 
       {/* Delete Confirmation Dialog */}
       <Dialog

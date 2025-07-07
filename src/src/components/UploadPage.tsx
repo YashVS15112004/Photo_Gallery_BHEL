@@ -66,7 +66,7 @@ interface Album {
 }
 
 const UploadPage: React.FC = () => {
-  const { albums, createAlbum, updateAlbum, deleteAlbum, toggleAlbumVisibility, setThumbnail } = useAlbums();
+  const { albums, createAlbum, updateAlbum, deleteAlbum, toggleAlbumVisibility, setThumbnail, fetchAlbums } = useAlbums();
   const [selectedAlbum, setSelectedAlbum] = useState<string>('');
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -82,6 +82,14 @@ const UploadPage: React.FC = () => {
     message: '',
     severity: 'success'
   });
+
+  // Add pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Calculate paginated albums
+  const paginatedAlbums = albums ? albums.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage) : [];
+  const totalPages = albums ? Math.ceil(albums.length / itemsPerPage) : 1;
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     console.log('Files dropped:', acceptedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
@@ -191,6 +199,7 @@ const UploadPage: React.FC = () => {
     if (!newAlbumName.trim()) return;
 
     const album = await createAlbum(newAlbumName.trim(), newAlbumDescription.trim());
+    await fetchAlbums();
     if (album) {
       setShowCreateAlbum(false);
       setNewAlbumName('');
@@ -251,6 +260,7 @@ const UploadPage: React.FC = () => {
       };
       
       const success = await updateAlbum(editingAlbum._id, albumData);
+      await fetchAlbums();
       if (success) {
         setSnackbar({
           open: true,
@@ -284,6 +294,7 @@ const UploadPage: React.FC = () => {
     try {
       console.log('Setting thumbnail for image:', imageId);
       const success = await setThumbnail(editingAlbum._id, imageId);
+      await fetchAlbums();
       if (success) {
         setSnackbar({
           open: true,
@@ -350,6 +361,7 @@ const UploadPage: React.FC = () => {
       // Remove image from the album
       const updatedImages = editingAlbum.images.filter(img => img._id !== imageId);
       const success = await updateAlbum(editingAlbum._id, { images: updatedImages });
+      await fetchAlbums();
       
       if (success) {
         setSnackbar({
@@ -381,6 +393,7 @@ const UploadPage: React.FC = () => {
   const handleDeleteAlbum = async (albumId: string) => {
     if (window.confirm('Are you sure you want to delete this album? This action cannot be undone.')) {
       const success = await deleteAlbum(albumId);
+      await fetchAlbums();
       if (success) {
         setSnackbar({
           open: true,
@@ -399,6 +412,7 @@ const UploadPage: React.FC = () => {
 
   const handleToggleVisibility = async (albumId: string) => {
     const success = await toggleAlbumVisibility(albumId);
+    await fetchAlbums();
     if (success) {
       setSnackbar({
         open: true,
@@ -474,7 +488,7 @@ const UploadPage: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {albums.map((album) => (
+                {paginatedAlbums.map((album) => (
                   <motion.tr
                     key={album._id}
                     component={TableRow}
@@ -527,7 +541,7 @@ const UploadPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {album.author?.username || 'Unknown'}
+                        {album.createdBy?.username || 'Unknown'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -572,6 +586,25 @@ const UploadPage: React.FC = () => {
           </TableContainer>
         </CardContent>
       </Card>
+
+      {/* Add pagination controls below the table */}
+      <Box display="flex" justifyContent="center" alignItems="center" mt={4}>
+        <button
+          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+        >
+          {'<'}
+        </button>
+        <span className="mx-2 text-sm">Page {currentPage} of {totalPages}</span>
+        <button
+          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+        >
+          {'>'}
+        </button>
+      </Box>
 
       {/* Upload Modal */}
       <Dialog 

@@ -92,7 +92,7 @@ const AdminDashboard: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get('/albums');
-      setAlbums(response.data);
+      setAlbums(response.data.albums || []);
       setError(null);
     } catch (err) {
       setError('Failed to fetch albums');
@@ -331,6 +331,7 @@ const AdminDashboard: React.FC = () => {
                 <TableRow>
                   <TableCell>S.No.</TableCell>
                   <TableCell>Album Thumbnail</TableCell>
+                  <TableCell>Author</TableCell>
                   <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -348,6 +349,7 @@ const AdminDashboard: React.FC = () => {
                         />
                       </Tooltip>
                     </TableCell>
+                    <TableCell>{album.createdBy?.username || 'Unknown'}</TableCell>
                     <TableCell align="center">
                       <Box display="flex" gap={1} justifyContent="center">
                         <Tooltip title="Set Thumbnail">
@@ -377,60 +379,6 @@ const AdminDashboard: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
-
-          {/* Images Grid for each album */}
-          {albums.map((album) => (
-            <Box key={`images-${album._id}`} sx={{ mt: 4 }}>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                Images in "{album.name}"
-              </Typography>
-              <Grid container spacing={2}>
-                {album.images.map((image) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={image._id}>
-                    <Card sx={{ height: '100%' }}>
-                      <CardMedia
-                        component="img"
-                        height="200"
-                        image={image.path}
-                        alt={image.filename}
-                        sx={{ objectFit: 'cover' }}
-                      />
-                      <CardContent>
-                        <Typography variant="body2" noWrap>
-                          {image.filename}
-                        </Typography>
-                        {image.caption && (
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            Caption: {image.caption}
-                          </Typography>
-                        )}
-                        <Box display="flex" gap={1} mt={1}>
-                          <Tooltip title="Edit Caption">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleEditCaption(album, image)}
-                              color="primary"
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete Image">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleDeleteImage(album._id, image._id)}
-                              color="error"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          ))}
         </motion.div>
       )}
 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api } from '../services/api';
+import { useAuth } from './AuthContext';
 
 interface Image {
   _id: string;
@@ -51,6 +52,7 @@ export const AlbumProvider: React.FC<AlbumProviderProps> = ({ children }) => {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isAuthenticated } = useAuth();
 
   const fetchAlbums = async () => {
     setIsLoading(true);
@@ -73,7 +75,7 @@ export const AlbumProvider: React.FC<AlbumProviderProps> = ({ children }) => {
       const response = await api.post('/albums', { name, description });
       console.log('Album created successfully:', response.data);
       const newAlbum = response.data.album;
-      setAlbums(prev => [...prev, newAlbum]);
+      await fetchAlbums();
       return newAlbum;
     } catch (err) {
       setError('Failed to create album');
@@ -89,9 +91,7 @@ export const AlbumProvider: React.FC<AlbumProviderProps> = ({ children }) => {
     try {
       const response = await api.put(`/albums/${id}`, data);
       const updatedAlbum = response.data.album;
-      setAlbums(prev => prev.map(album => 
-        album._id === id ? updatedAlbum : album
-      ));
+      await fetchAlbums();
       return true;
     } catch (err) {
       setError('Failed to update album');
@@ -103,7 +103,7 @@ export const AlbumProvider: React.FC<AlbumProviderProps> = ({ children }) => {
   const deleteAlbum = async (id: string): Promise<boolean> => {
     try {
       await api.delete(`/albums/${id}`);
-      setAlbums(prev => prev.filter(album => album._id !== id));
+      await fetchAlbums();
       return true;
     } catch (err) {
       setError('Failed to delete album');
@@ -116,9 +116,7 @@ export const AlbumProvider: React.FC<AlbumProviderProps> = ({ children }) => {
     try {
       const response = await api.put(`/albums/${albumId}/thumbnail`, { imageId });
       const updatedAlbum = response.data.album;
-      setAlbums(prev => prev.map(album => 
-        album._id === albumId ? updatedAlbum : album
-      ));
+      await fetchAlbums();
       return true;
     } catch (err) {
       setError('Failed to set thumbnail');
@@ -131,9 +129,7 @@ export const AlbumProvider: React.FC<AlbumProviderProps> = ({ children }) => {
     try {
       const response = await api.put(`/albums/${id}/visibility`);
       const updatedAlbum = response.data.album;
-      setAlbums(prev => prev.map(album => 
-        album._id === id ? updatedAlbum : album
-      ));
+      await fetchAlbums();
       return true;
     } catch (err) {
       setError('Failed to toggle album visibility');

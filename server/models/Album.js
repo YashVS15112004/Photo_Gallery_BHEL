@@ -44,7 +44,7 @@ albumSchema.index({ createdAt: -1 });
 
 // Virtual for image count
 albumSchema.virtual('imageCount').get(function() {
-  return this.images.length;
+  return (this.images ? this.images.length : 0);
 });
 
 // Ensure virtual fields are serialized
@@ -94,6 +94,7 @@ albumSchema.methods.toggleVisibility = function() {
 // Static method to get visible albums
 albumSchema.statics.getVisibleAlbums = function() {
   return this.find({ isHidden: false })
+    .populate('images', 'path filename caption uploadedAt')
     .populate('thumbnail', 'path filename')
     .populate('createdBy', 'username')
     .sort({ createdAt: -1 });

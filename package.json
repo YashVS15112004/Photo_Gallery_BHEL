@@ -31,5 +31,9 @@
     "material-ui"
   ],
   "author": "BHEL Team",
-  "license": "MIT"
-} 
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "mongoose": "^8.16.1"
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Typography,
@@ -42,79 +42,96 @@ interface Album {
   thumbnail?: Image;
   isHidden: boolean;
   createdAt: string;
+  totalImages: number;
+  images: Image[];
+  offset: number;
+  limit: number;
 }
+
+const IMAGES_BATCH_SIZE = 10;
 
 const AlbumDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { albums } = useAlbums();
   const [album, setAlbum] = useState<Album | null>(null);
+  const [images, setImages] = useState<Image[]>([]);
+  const [totalImages, setTotalImages] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [imageWidth, setImageWidth] = useState<number | undefined>(undefined);
+
+  // Fetch a batch of images
+  const fetchImagesBatch = async (batchOffset: number) => {
+    try {
+      if (batchOffset === 0) setIsLoading(true);
+      else setIsLoadingMore(true);
+      const response = await api.get(`/albums/${id}?offset=${batchOffset}&limit=${IMAGES_BATCH_SIZE}`);
+      const { album: albumData, hasMore: more, totalImages: total, offset: newOffset } = response.data;
+      if (batchOffset === 0) {
+        setAlbum(albumData);
+        setImages(albumData.images);
+        setTotalImages(albumData.totalImages);
+        setOffset(albumData.images.length);
+        setHasMore(more);
+      } else {
+        setImages(prev => [...prev, ...albumData.images]);
+        setOffset(prev => prev + albumData.images.length);
+        setHasMore(more);
+      }
+    } catch (err) {
+      setError('Failed to load album');
+      console.error('Error fetching album:', err);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAlbum = async () => {
-      if (!id) return;
-
-      try {
-        setIsLoading(true);
-        const response = await api.get(`/albums/${id}`);
-        setAlbum(response.data.album);
-      } catch (err) {
-        setError('Failed to load album');
-        console.error('Error fetching album:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAlbum();
+    if (id) fetchImagesBatch(0);
+    // eslint-disable-next-line
   }, [id]);
 
-  const handleImageClick = (index: number) => {
-    setSelectedImageIndex(index);
-    setLightboxOpen(true);
-  };
-
-  const handleCloseLightbox = () => {
-    setLightboxOpen(false);
-    setSelectedImageIndex(null);
-  };
-
-  const handlePrevious = () => {
-    if (selectedImageIndex !== null && album) {
-      setSelectedImageIndex(selectedImageIndex === 0 ? album.images.length - 1 : selectedImageIndex - 1);
+  // Infinite scroll: fetch next batch if user navigates to last loaded image
+  useEffect(() => {
+    if (
+      hasMore &&
+      !isLoadingMore &&
+      selectedImageIndex >= images.length - 2 && // prefetch before last image
+      images.length < totalImages
+    ) {
+      fetchImagesBatch(offset);
     }
-  };
+    // eslint-disable-next-line
+  }, [selectedImageIndex, images, hasMore, isLoadingMore, offset, totalImages]);
 
-  const handleNext = () => {
-    if (selectedImageIndex !== null && album) {
-      setSelectedImageIndex(selectedImageIndex === album.images.length - 1 ? 0 : selectedImageIndex + 1);
-    }
-  };
-
+  // Keyboard navigation
   const handleKeyPress = (e: KeyboardEvent) => {
-    if (!lightboxOpen) return;
-
+    if (!album) return;
     switch (e.key) {
       case 'Escape':
-        handleCloseLightbox();
+        navigate(-1);
         break;
       case 'ArrowLeft':
-        handlePrevious();
+        setSelectedImageIndex(idx => (idx === 0 ? images.length - 1 : idx - 1));
         break;
       case 'ArrowRight':
-        handleNext();
+        setSelectedImageIndex(idx => (idx === images.length - 1 ? 0 : idx + 1));
         break;
     }
   };
-
   useEffect(() => {
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [lightboxOpen, selectedImageIndex, album]);
+    // eslint-disable-next-line
+  }, [album, images]);
 
   if (isLoading) {
     return (
@@ -153,276 +170,57 @@ const AlbumDetail: React.FC = () => {
         <Alert severity="error" sx={{ mb: 2 }}>
           {error || 'Album not found'}
         </Alert>
-        <Button variant="contained" onClick={() => navigate('/')}>
-          Back to Gallery
-        </Button>
+        <Button variant="contained" onClick={() => navigate('/')}>Back to Gallery</Button>
       </Container>
     );
   }
 
+  // Only show the slideshow modal (lightbox) as the main/default view
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Box display="flex" alignItems="center" mb={3}>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <IconButton onClick={() => navigate('/')} sx={{ mr: 2 }}>
-              <ArrowBackIcon />
-            </IconButton>
-          </motion.div>
-          <Box flex={1}>
-            <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
-              {album.name}
-            </Typography>
-            {album.description && (
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-                {album.description}
-              </Typography>
-            )}
-            <Chip
-              label={`${album.images.length} photos`}
-              color="primary"
-              variant="outlined"
-            />
-          </Box>
-        </Box>
-      </motion.div>
-
-      {album.images.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Box
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            justifyContent="center"
-            minHeight="400px"
-            textAlign="center"
-          >
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              No photos in this album
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Photos will appear here once they are uploaded to this album.
-            </Typography>
-          </Box>
-        </motion.div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Slideshow Controls */}
-          <Box display="flex" justifyContent="center" alignItems="center" mb={3} gap={2}>
-            <Button
-              variant="outlined"
-              onClick={() => setLightboxOpen(true)}
-              startIcon={<ZoomInIcon />}
-              sx={{
-                borderColor: 'primary.main',
-                color: 'primary.main',
-                '&:hover': {
-                  borderColor: 'primary.dark',
-                  backgroundColor: 'primary.main',
-                  color: 'white',
-                },
-              }}
-            >
-              Start Slideshow
-            </Button>
-            <Typography variant="body2" color="text.secondary">
-              {album.images.length} photos • Click any image to view
-            </Typography>
-          </Box>
-
-          {/* Slideshow Preview */}
+    <Dialog
+      open={true}
+      onClose={() => navigate(-1)}
+      maxWidth={false}
+      fullWidth
+      PaperProps={{
+        sx: {
+          bgcolor: 'rgba(0, 0, 0, 0.9)',
+          boxShadow: 'none',
+          borderRadius: 0,
+        },
+      }}
+    >
+      <DialogContent sx={{ p: 0, position: 'relative', overflow: 'hidden' }}>
+        {images.length > 0 && (
           <Box
             sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '80vh',
               position: 'relative',
-              height: '60vh',
-              borderRadius: 3,
-              overflow: 'hidden',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              cursor: 'pointer',
+              flexDirection: 'column',
             }}
-            onClick={() => setLightboxOpen(true)}
           >
-            <AnimatePresence mode="wait">
-              <motion.img
-                key={selectedImageIndex !== null ? selectedImageIndex : 0}
-                src={album.images[selectedImageIndex !== null ? selectedImageIndex : 0].path}
-                alt={album.images[selectedImageIndex !== null ? selectedImageIndex : 0].caption || album.images[selectedImageIndex !== null ? selectedImageIndex : 0].filename}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                }}
-                initial={{ opacity: 0, scale: 1.1 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.5 }}
-                onError={(e) => {
-                  console.error('Image failed to load:', album.images[selectedImageIndex !== null ? selectedImageIndex : 0].path);
-                  e.currentTarget.src = '/placeholder-image.jpg';
-                }}
-              />
-            </AnimatePresence>
-
-            {/* Image Info Overlay */}
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: 'linear-gradient(transparent, rgba(0, 0, 0, 0.8))',
-                color: 'white',
-                p: 3,
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                {album.images[selectedImageIndex !== null ? selectedImageIndex : 0].caption || 'Untitled'}
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                Photo {selectedImageIndex !== null ? selectedImageIndex + 1 : 1} of {album.images.length}
-              </Typography>
-            </Box>
-
-            {/* Navigation Arrows */}
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePrevious();
-              }}
-              sx={{
-                position: 'absolute',
-                left: 16,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                bgcolor: 'rgba(0, 0, 0, 0.5)',
-                color: 'white',
-                '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' },
-              }}
-            >
-              <NavigateBeforeIcon />
-            </IconButton>
-            
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNext();
-              }}
-              sx={{
-                position: 'absolute',
-                right: 16,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                bgcolor: 'rgba(0, 0, 0, 0.5)',
-                color: 'white',
-                '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' },
-              }}
-            >
-              <NavigateNextIcon />
-            </IconButton>
-
-            {/* Thumbnail Navigation */}
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: 80,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                gap: 1,
-                maxWidth: '80%',
-                overflowX: 'auto',
-                p: 1,
-                bgcolor: 'rgba(0, 0, 0, 0.5)',
-                borderRadius: 2,
-              }}
-            >
-              {album.images.map((image, index) => (
-                <Box
-                  key={image._id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedImageIndex(index);
-                  }}
-                  sx={{
-                    width: 60,
-                    height: 40,
-                    borderRadius: 1,
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    border: index === (selectedImageIndex !== null ? selectedImageIndex : 0) ? '2px solid white' : '2px solid transparent',
-                    opacity: index === (selectedImageIndex !== null ? selectedImageIndex : 0) ? 1 : 0.7,
-                    '&:hover': { opacity: 1 },
-                  }}
-                >
-                  <img
-                    src={image.path}
-                    alt={image.caption || image.filename}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
-                    onError={(e) => {
-                      e.currentTarget.src = '/placeholder-image.jpg';
-                    }}
-                  />
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        </motion.div>
-      )}
-
-      {/* Lightbox */}
-      <Dialog
-        open={lightboxOpen}
-        onClose={handleCloseLightbox}
-        maxWidth={false}
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: 'rgba(0, 0, 0, 0.9)',
-            boxShadow: 'none',
-            borderRadius: 0,
-          },
-        }}
-      >
-        <DialogContent sx={{ p: 0, position: 'relative' }}>
-          {selectedImageIndex !== null && album && (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '80vh',
-                position: 'relative',
-              }}
-            >
+            <Box sx={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh', paddingTop: '64px' }}>
               <img
-                src={album.images[selectedImageIndex].path}
-                alt={album.images[selectedImageIndex].caption || album.images[selectedImageIndex].filename}
+                ref={imageRef}
+                src={images[selectedImageIndex].path}
+                alt={images[selectedImageIndex].caption || album.description || album.name || ''}
                 style={{
                   maxWidth: '90vw',
-                  maxHeight: '80vh',
+                  maxHeight: '70vh',
                   objectFit: 'contain',
+                  display: 'block',
+                  margin: '0 auto',
+                }}
+                onLoad={() => {
+                  if (imageRef.current) setImageWidth(imageRef.current.clientWidth);
                 }}
               />
-              
               {/* Navigation buttons */}
               <IconButton
-                onClick={handlePrevious}
+                onClick={() => setSelectedImageIndex(idx => (idx === 0 ? images.length - 1 : idx - 1))}
                 sx={{
                   position: 'absolute',
                   left: 16,
@@ -435,9 +233,8 @@ const AlbumDetail: React.FC = () => {
               >
                 <NavigateBeforeIcon />
               </IconButton>
-              
               <IconButton
-                onClick={handleNext}
+                onClick={() => setSelectedImageIndex(idx => (idx === images.length - 1 ? 0 : idx + 1))}
                 sx={{
                   position: 'absolute',
                   right: 16,
@@ -450,10 +247,9 @@ const AlbumDetail: React.FC = () => {
               >
                 <NavigateNextIcon />
               </IconButton>
-              
               {/* Close button */}
               <IconButton
-                onClick={handleCloseLightbox}
+                onClick={() => navigate(-1)}
                 sx={{
                   position: 'absolute',
                   top: 16,
@@ -465,27 +261,6 @@ const AlbumDetail: React.FC = () => {
               >
                 <CloseIcon />
               </IconButton>
-              
-              {/* Image info */}
-              {album.images[selectedImageIndex].caption && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    bgcolor: 'rgba(0, 0, 0, 0.7)',
-                    color: 'white',
-                    p: 2,
-                    borderRadius: 1,
-                  }}
-                >
-                  <Typography variant="body1">
-                    {album.images[selectedImageIndex].caption}
-                  </Typography>
-                </Box>
-              )}
-              
               {/* Image counter */}
               <Box
                 sx={{
@@ -500,14 +275,100 @@ const AlbumDetail: React.FC = () => {
                 }}
               >
                 <Typography variant="body2">
-                  {selectedImageIndex + 1} / {album.images.length}
+                  {images.length > 0 ? `${selectedImageIndex + 1} / ${totalImages || images.length}` : `0 / 0`}
                 </Typography>
               </Box>
             </Box>
-          )}
-        </DialogContent>
-      </Dialog>
-    </Container>
+            {/* Caption at bottom center, overlays image and matches width */}
+            <Box
+              sx={{
+                position: 'relative',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: 0,
+                  transform: 'translateX(-50%)',
+                  width: imageWidth ? `${imageWidth}px` : 'auto',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  pointerEvents: 'none',
+                }}
+              >
+                <Typography
+                  variant="body1"
+                  sx={{
+                    bgcolor: 'rgba(0,0,0,0.7)',
+                    color: 'white',
+                    px: 3,
+                    py: 1,
+                    borderRadius: 0,
+                    fontWeight: 500,
+                    width: '100%',
+                    maxWidth: '100%',
+                    textAlign: 'center',
+                  }}
+                >
+                  {images[selectedImageIndex].caption || album.description || album.name || ''}
+                </Typography>
+              </Box>
+            </Box>
+            {/* Thumbnail strip at bottom */}
+            <Box
+              sx={{
+                mt: 3,
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                overflowX: 'auto',
+                gap: 1,
+                pb: 2,
+              }}
+            >
+              {images.map((image, index) => (
+                <Box
+                  key={image._id}
+                  onClick={() => setSelectedImageIndex(index)}
+                  sx={{
+                    width: 60,
+                    height: 40,
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    border: index === selectedImageIndex ? '2px solid white' : '2px solid transparent',
+                    opacity: index === selectedImageIndex ? 1 : 0.7,
+                    '&:hover': { opacity: 1 },
+                  }}
+                >
+                  <img
+                    src={image.path}
+                    alt={image.caption || image.filename}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                </Box>
+              ))}
+              {isLoadingMore && (
+                <Box sx={{ width: 60, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Skeleton variant="rectangular" width={60} height={40} />
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
 

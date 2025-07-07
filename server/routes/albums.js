@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const Album = require('../models/Album');
 const Image = require('../models/Image');
 const { auth, optionalAuth } = require('../middleware/auth');
+const { logAlbumActivity } = require('../middleware/activityLogger');
 
 const router = express.Router();
 
@@ -12,37 +13,33 @@ const router = express.Router();
 router.get('/', optionalAuth, async (req, res) => {
   try {
     let albums;
-    
-    if (req.user) {
-      // Authenticated users can see all albums
-      albums = await Album.find()
+    if (req.user && req.user.isAuthorized) {
+      // Show all albums to authorized users
+      albums = await Album.find({})
+        .populate('images', 'path filename caption uploadedAt')
         .populate('thumbnail', 'path filename')
         .populate('createdBy', 'username')
         .sort({ createdAt: -1 });
     } else {
-      // Public users can only see visible albums
+      // Only show visible albums to public
       albums = await Album.getVisibleAlbums();
     }
-
     res.json({ albums });
   } catch (error) {
     console.error('Get albums error:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error message:', error.message);
-    res.status(500).json({ 
-      error: 'Failed to fetch albums',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Failed to fetch albums' });
   }
 });
 
 // @route   GET /api/albums/:id
-// @desc    Get album by ID
+// @desc    Get album by ID, with paginated images
 // @access  Public
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
+    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit) || 10;
+
     const album = await Album.findById(req.params.id)
-      .populate('images', 'path filename caption uploadedAt')
       .populate('thumbnail', 'path filename')
       .populate('createdBy', 'username');
 
@@ -55,7 +52,32 @@ router.get('/:id', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'Album not found' });
     }
 
-    res.json({ album });
+    // Paginate images
+    const totalImages = album.images.length;
+    const imageIds = album.images.slice(offset, offset + limit);
+    // Fetch image objects for the current batch
+    const images = await Image.find({ _id: { $in: imageIds } })
+      .select('path filename caption uploadedAt')
+      .sort({ uploadedAt: 1 });
+    // Maintain the order as in album.images
+    const imagesOrdered = imageIds.map(id => images.find(img => img._id.toString() === id.toString())).filter(Boolean);
+
+    res.json({
+      album: {
+        _id: album._id,
+        name: album.name,
+        description: album.description,
+        createdBy: album.createdBy,
+        thumbnail: album.thumbnail,
+        isHidden: album.isHidden,
+        createdAt: album.createdAt,
+        totalImages,
+        images: imagesOrdered,
+      },
+      offset,
+      limit,
+      hasMore: offset + limit < totalImages
+    });
   } catch (error) {
     console.error('Get album error:', error);
     res.status(500).json({ error: 'Failed to fetch album' });
@@ -103,6 +125,17 @@ router.post('/', [
     // Populate the created album
     await album.populate('createdBy', 'username');
 
+    // Log album creation activity directly
+    await require('../models/ActivityLog').logActivity({
+      user: req.user._id,
+      action: 'create',
+      resource: 'album',
+      resourceId: album._id,
+      details: `Created album '${album.name}'`,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent')
+    });
+
     res.status(201).json({
       message: 'Album created successfully',
       album
@@ -138,8 +171,8 @@ router.put('/:id', [
     }
 
     // Check if user owns the album or is admin
-    if (album.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
+    if (!req.user.isAuthorized) {
+      return res.status(403).json({ error: 'Access denied: not authorized' });
     }
 
     const { name, description } = req.body;
@@ -175,6 +208,16 @@ router.put('/:id', [
       message: 'Album updated successfully',
       album: updatedAlbum
     });
+    // Log album update
+    await require('../models/ActivityLog').logActivity({
+      user: req.user._id,
+      action: 'update',
+      resource: 'album',
+      resourceId: album._id,
+      details: `Updated album '${album.name}'`,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent')
+    });
   } catch (error) {
     console.error('Update album error:', error);
     res.status(500).json({ error: 'Failed to update album' });
@@ -193,8 +236,8 @@ router.patch('/:id', auth, async (req, res) => {
     }
 
     // Check if user owns the album or is admin
-    if (album.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
+    if (!req.user.isAuthorized) {
+      return res.status(403).json({ error: 'Access denied: not authorized' });
     }
 
     const updates = {};
@@ -233,8 +276,8 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     // Check if user owns the album or is admin
-    if (album.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
+    if (!req.user.isAuthorized) {
+      return res.status(403).json({ error: 'Access denied: not authorized' });
     }
 
     // Delete associated images
@@ -243,6 +286,17 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     await Album.findByIdAndDelete(req.params.id);
+
+    // Log the activity after deletion directly
+    await require('../models/ActivityLog').logActivity({
+      user: req.user._id,
+      action: 'delete_album',
+      resource: 'album',
+      resourceId: album._id,
+      details: 'Deleted album and all associated images',
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent')
+    });
 
     res.json({ message: 'Album deleted successfully' });
   } catch (error) {
@@ -263,8 +317,8 @@ router.put('/:id/visibility', auth, async (req, res) => {
     }
 
     // Check if user owns the album or is admin
-    if (album.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
+    if (!req.user.isAuthorized) {
+      return res.status(403).json({ error: 'Access denied: not authorized' });
     }
 
     await album.toggleVisibility();
@@ -272,6 +326,16 @@ router.put('/:id/visibility', auth, async (req, res) => {
     res.json({
       message: 'Album visibility updated successfully',
       album
+    });
+    // Log album visibility toggle
+    await require('../models/ActivityLog').logActivity({
+      user: req.user._id,
+      action: 'toggle_visibility',
+      resource: 'album',
+      resourceId: album._id,
+      details: `Toggled visibility for album '${album.name}'`,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent')
     });
   } catch (error) {
     console.error('Toggle visibility error:', error);
@@ -281,41 +345,34 @@ router.put('/:id/visibility', auth, async (req, res) => {
 
 // @route   PUT /api/albums/:id/thumbnail
 // @desc    Set album thumbnail
-// @access  Private
 router.put('/:id/thumbnail', [
   auth,
-  body('imageId').notEmpty().withMessage('Image ID is required')
+  body('imageId').isMongoId().withMessage('Valid image ID is required')
 ], async (req, res) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        error: 'Validation failed',
-        details: errors.array()
-      });
-    }
-
     const album = await Album.findById(req.params.id);
-
     if (!album) {
       return res.status(404).json({ error: 'Album not found' });
     }
-
     // Check if user owns the album or is admin
-    if (album.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
+    if (!req.user.isAuthorized) {
+      return res.status(403).json({ error: 'Access denied: not authorized' });
     }
-
     await album.setThumbnail(req.body.imageId);
-
-    const updatedAlbum = await Album.findById(req.params.id)
-      .populate('thumbnail', 'path filename')
-      .populate('createdBy', 'username');
-
+    await album.populate('thumbnail', 'path filename');
     res.json({
       message: 'Album thumbnail updated successfully',
-      album: updatedAlbum
+      album
+    });
+    // Log album thumbnail modification
+    await require('../models/ActivityLog').logActivity({
+      user: req.user._id,
+      action: 'modify_thumbnail',
+      resource: 'album',
+      resourceId: album._id,
+      details: `Modified thumbnail for album '${album.name}'`,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent')
     });
   } catch (error) {
     console.error('Set thumbnail error:', error);
@@ -347,8 +404,8 @@ router.patch('/:id/images/:imageId', [
     }
 
     // Check if user owns the album or is admin
-    if (album.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
+    if (!req.user.isAuthorized) {
+      return res.status(403).json({ error: 'Access denied: not authorized' });
     }
 
     // Check if image exists in the album
@@ -371,6 +428,16 @@ router.patch('/:id/images/:imageId', [
       message: 'Image caption updated successfully',
       image: updatedImage
     });
+    // Log image caption modification
+    await require('../models/ActivityLog').logActivity({
+      user: req.user._id,
+      action: 'modify_caption',
+      resource: 'image',
+      resourceId: req.params.imageId,
+      details: `Modified caption for image in album '${album.name}'`,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent')
+    });
   } catch (error) {
     console.error('Update image caption error:', error);
     res.status(500).json({ error: 'Failed to update image caption' });
@@ -389,8 +456,8 @@ router.delete('/:id/images/:imageId', auth, async (req, res) => {
     }
 
     // Check if user owns the album or is admin
-    if (album.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
+    if (!req.user.isAuthorized) {
+      return res.status(403).json({ error: 'Access denied: not authorized' });
     }
 
     // Check if image exists in the album
@@ -427,6 +494,16 @@ router.delete('/:id/images/:imageId', auth, async (req, res) => {
     }
 
     res.json({ message: 'Image deleted successfully' });
+    // Log image deletion
+    await require('../models/ActivityLog').logActivity({
+      user: req.user._id,
+      action: 'delete_image',
+      resource: 'image',
+      resourceId: req.params.imageId,
+      details: `Deleted image from album '${album.name}'`,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent')
+    });
   } catch (error) {
     console.error('Delete image error:', error);
     res.status(500).json({ error: 'Failed to delete image' });
