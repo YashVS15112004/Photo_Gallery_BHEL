@@ -9,6 +9,7 @@ import api from '../lib/api'
 import { ActivityLog } from '../types'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx';
+import { Tooltip } from '../components/ui/Tooltip';
 
 export function ActivityLogs() {
   const queryClient = useQueryClient();
@@ -116,13 +117,17 @@ export function ActivityLogs() {
           <p className="text-gray-600">Monitor system activity and user actions</p>
         </div>
         <div className="flex space-x-2">
-          <Button onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            Export Logs
-          </Button>
-          <Button variant="danger" onClick={handleClearLogs}>
-            Clear Logs
-          </Button>
+          <Tooltip title="Export logs">
+            <Button onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              Export Logs
+            </Button>
+          </Tooltip>
+          <Tooltip title="Clear logs">
+            <Button variant="danger" onClick={handleClearLogs}>
+              Clear Logs
+            </Button>
+          </Tooltip>
         </div>
       </div>
 
@@ -176,7 +181,9 @@ export function ActivityLogs() {
               onChange={(e) => handlePendingFilterChange('dateFrom', e.target.value)}
               icon={<Calendar className="h-4 w-4" />}
             />
-            <Button onClick={handleSearch} className="w-full">Search</Button>
+            <Tooltip title="Search logs">
+              <Button onClick={handleSearch} className="w-full">Search</Button>
+            </Tooltip>
           </div>
         </CardContent>
       </Card>
@@ -263,21 +270,25 @@ export function ActivityLogs() {
       </Card>
       {/* Add pagination controls below the table */}
       <div className="flex justify-center items-center mt-4 space-x-2">
-        <button
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
-        >
-          {'<'}
-        </button>
+        <Tooltip title="Previous page">
+          <button
+            className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            {'<'}
+          </button>
+        </Tooltip>
         <span className="mx-2 text-sm">Page {currentPage} of {totalPages}</span>
-        <button
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          disabled={currentPage === totalPages}
-        >
-          {'>'}
-        </button>
+        <Tooltip title="Next page">
+          <button
+            className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            {'>'}
+          </button>
+        </Tooltip>
       </div>
     </div>
   )

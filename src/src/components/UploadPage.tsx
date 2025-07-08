@@ -29,6 +29,7 @@ import {
   CardActions,
   Snackbar,
   Skeleton,
+  Tooltip,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -453,20 +454,24 @@ const UploadPage: React.FC = () => {
             Album Management
           </Typography>
           <Box display="flex" gap={2}>
-            <Button
-              startIcon={<AddIcon />}
-              variant="outlined"
-              onClick={() => setShowCreateAlbum(true)}
-            >
-              New Album
-            </Button>
-            <Button
-              startIcon={<CloudUploadIcon />}
-              variant="contained"
-              onClick={openUploadModal}
-            >
-              Upload Photos
-            </Button>
+            <Tooltip title="New Album" arrow placement="top" PopperProps={{ disablePortal: true }}>
+              <Button
+                startIcon={<AddIcon />}
+                variant="outlined"
+                onClick={() => setShowCreateAlbum(true)}
+              >
+                New Album
+              </Button>
+            </Tooltip>
+            <Tooltip title="Upload Photos" arrow placement="top" PopperProps={{ disablePortal: true }}>
+              <Button
+                startIcon={<CloudUploadIcon />}
+                variant="contained"
+                onClick={openUploadModal}
+              >
+                Upload Photos
+              </Button>
+            </Tooltip>
           </Box>
         </Box>
       </motion.div>
@@ -554,29 +559,35 @@ const UploadPage: React.FC = () => {
                     </TableCell>
                     <TableCell align="center">
                       <Box display="flex" gap={0.5} justifyContent="center">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEditAlbum(album._id)}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleVisibility(album._id)}
-                        >
-                          {album.isHidden ? (
-                            <VisibilityOffIcon fontSize="small" />
-                          ) : (
-                            <VisibilityIcon fontSize="small" />
-                          )}
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteAlbum(album._id)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                        <Tooltip title="Edit Album" arrow placement="top" PopperProps={{ disablePortal: true }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEditAlbum(album._id)}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Toggle Visibility" arrow placement="top" PopperProps={{ disablePortal: true }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleToggleVisibility(album._id)}
+                          >
+                            {album.isHidden ? (
+                              <VisibilityOffIcon fontSize="small" />
+                            ) : (
+                              <VisibilityIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Album" arrow placement="top" PopperProps={{ disablePortal: true }}>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteAlbum(album._id)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
                     </TableCell>
                   </motion.tr>
@@ -589,21 +600,25 @@ const UploadPage: React.FC = () => {
 
       {/* Add pagination controls below the table */}
       <Box display="flex" justifyContent="center" alignItems="center" mt={4}>
-        <button
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
-        >
-          {'<'}
-        </button>
+        <Tooltip title="Previous Page" arrow placement="top" PopperProps={{ disablePortal: true }}>
+          <button
+            className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            {'<'}
+          </button>
+        </Tooltip>
         <span className="mx-2 text-sm">Page {currentPage} of {totalPages}</span>
-        <button
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          disabled={currentPage === totalPages}
-        >
-          {'>'}
-        </button>
+        <Tooltip title="Next Page" arrow placement="top" PopperProps={{ disablePortal: true }}>
+          <button
+            className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            {'>'}
+          </button>
+        </Tooltip>
       </Box>
 
       {/* Upload Modal */}
@@ -745,13 +760,15 @@ const UploadPage: React.FC = () => {
                             sx={{ mt: 1 }}
                           />
                         </Box>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => removeFile(index)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
+                        <Tooltip title="Delete Photo" arrow placement="top" PopperProps={{ disablePortal: true }}>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => removeFile(index)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
                       
                       {uploadFile.status === 'uploading' && (
@@ -776,14 +793,18 @@ const UploadPage: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowUploadModal(false)}>Cancel</Button>
-          <Button 
-            onClick={handleUpload} 
-            disabled={isUploading || !selectedAlbum || uploadFiles.length === 0}
-            variant="contained"
-          >
-            {isUploading ? 'Uploading...' : 'Upload Photos'}
-          </Button>
+          <Tooltip title="Cancel" arrow placement="top" PopperProps={{ disablePortal: true }}>
+            <Button onClick={() => setShowUploadModal(false)}>Cancel</Button>
+          </Tooltip>
+          <Tooltip title="Upload Photos" arrow placement="top" PopperProps={{ disablePortal: true }}>
+            <Button 
+              onClick={handleUpload} 
+              disabled={isUploading || !selectedAlbum || uploadFiles.length === 0}
+              variant="contained"
+            >
+              {isUploading ? 'Uploading...' : 'Upload Photos'}
+            </Button>
+          </Tooltip>
         </DialogActions>
       </Dialog>
 
@@ -941,23 +962,27 @@ const UploadPage: React.FC = () => {
                               sx={{ width: 60, '& .MuiInputBase-input': { fontSize: 10, p: 0.5 } }}
                             />
                             <Box sx={{ display: 'flex', gap: 0.5 }}>
-                              <IconButton
-                                size="small"
-                                color={editingAlbum.thumbnail?._id === image._id ? 'success' : 'primary'}
-                                onClick={() => handleSetThumbnail(image._id)}
-                                disabled={editingAlbum.thumbnail?._id === image._id}
-                                sx={{ p: 0.5 }}
-                              >
-                                {editingAlbum.thumbnail?._id === image._id ? '✓' : <PhotoLibraryIcon fontSize="small" />}
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleDeleteImage(image._id)}
-                                sx={{ p: 0.5 }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
+                              <Tooltip title="Set as Thumbnail" arrow placement="top" PopperProps={{ disablePortal: true }}>
+                                <IconButton
+                                  size="small"
+                                  color={editingAlbum.thumbnail?._id === image._id ? 'success' : 'primary'}
+                                  onClick={() => handleSetThumbnail(image._id)}
+                                  disabled={editingAlbum.thumbnail?._id === image._id}
+                                  sx={{ p: 0.5 }}
+                                >
+                                  {editingAlbum.thumbnail?._id === image._id ? '✓' : <PhotoLibraryIcon fontSize="small" />}
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete Photo" arrow placement="top" PopperProps={{ disablePortal: true }}>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleDeleteImage(image._id)}
+                                  sx={{ p: 0.5 }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
                             </Box>
                           </Box>
                         </Grid>
@@ -976,17 +1001,21 @@ const UploadPage: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)} color="primary">
-            Cancel
-          </Button>
-          <Button 
-            onClick={() => editingAlbum && handleSaveAlbum(editingAlbum)} 
-            color="primary" 
-            variant="contained"
-            disabled={!editingAlbum || isSaving}
-          >
-            {isSaving ? 'Saving...' : 'Save Album Details'}
-          </Button>
+          <Tooltip title="Cancel" arrow placement="top" PopperProps={{ disablePortal: true }}>
+            <Button onClick={() => setEditDialogOpen(false)} color="primary">
+              Cancel
+            </Button>
+          </Tooltip>
+          <Tooltip title="Save Album Details" arrow placement="top" PopperProps={{ disablePortal: true }}>
+            <Button 
+              onClick={() => editingAlbum && handleSaveAlbum(editingAlbum)} 
+              color="primary" 
+              variant="contained"
+              disabled={!editingAlbum || isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save Album Details'}
+            </Button>
+          </Tooltip>
         </DialogActions>
       </Dialog>
 
@@ -1016,8 +1045,12 @@ const UploadPage: React.FC = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowCreateAlbum(false)}>Cancel</Button>
-          <Button onClick={handleCreateAlbum} variant="contained">Create</Button>
+          <Tooltip title="Cancel" arrow placement="top" PopperProps={{ disablePortal: true }}>
+            <Button onClick={() => setShowCreateAlbum(false)}>Cancel</Button>
+          </Tooltip>
+          <Tooltip title="Create album" arrow placement="top" PopperProps={{ disablePortal: true }}>
+            <Button onClick={handleCreateAlbum} variant="contained">Create</Button>
+          </Tooltip>
         </DialogActions>
       </Dialog>
 

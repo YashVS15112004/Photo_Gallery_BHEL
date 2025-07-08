@@ -7,10 +7,12 @@ import { formatDate } from '../lib/utils'
 import api from '../lib/api'
 import { Album } from '../types'
 import toast from 'react-hot-toast'
+import { Tooltip } from '../components/ui/Tooltip';
 
 export function Albums() {
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null)
   const queryClient = useQueryClient()
+  const [search, setSearch] = useState('');
 
   const { data: albums, isLoading } = useQuery({
     queryKey: ['admin-albums'],
@@ -61,6 +63,13 @@ export function Albums() {
   const paginatedAlbums = albums ? albums.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage) : [];
   const totalPages = albums ? Math.ceil(albums.length / itemsPerPage) : 1;
 
+  // Filter albums by search query
+  const filteredAlbums = albums
+    ? albums.filter(album =>
+        album.name.toLowerCase().includes(search.toLowerCase())
+      )
+    : [];
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -74,6 +83,17 @@ export function Albums() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Album Management</h1>
         <p className="text-gray-600">Manage all albums in the system</p>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-4 flex items-center">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search albums..."
+          className="border rounded px-3 py-2 w-full max-w-xs"
+        />
       </div>
 
       {/* Albums Table */}
@@ -106,6 +126,7 @@ export function Albums() {
                     size="sm"
                     onClick={() => handleToggleVisibility(album)}
                     title={album.isHidden ? 'Show Album' : 'Hide Album'}
+                    tooltip="Toggle album visibility"
                   >
                     {album.isHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
@@ -116,6 +137,7 @@ export function Albums() {
                     size="sm"
                     onClick={() => handleDeleteAlbum(album)}
                     title="Delete Album"
+                    tooltip="Delete album"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -138,21 +160,25 @@ export function Albums() {
 
       {/* Add pagination controls below the table */}
       <div className="flex justify-center items-center mt-4 space-x-2">
-        <button
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
-        >
-          {'<'}
-        </button>
+        <Tooltip title="Previous page">
+          <button
+            className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            {'<'}
+          </button>
+        </Tooltip>
         <span className="mx-2 text-sm">Page {currentPage} of {totalPages}</span>
-        <button
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          disabled={currentPage === totalPages}
-        >
-          {'>'}
-        </button>
+        <Tooltip title="Next page">
+          <button
+            className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            {'>'}
+          </button>
+        </Tooltip>
       </div>
     </div>
   )

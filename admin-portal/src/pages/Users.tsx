@@ -9,6 +9,7 @@ import api from '../lib/api'
 import { User, CreateUserData, UpdateUserData } from '../types'
 import toast from 'react-hot-toast'
 import { Dialog } from '../components/ui/Dialog';
+import { Tooltip } from '../components/ui/Tooltip';
 
 export function Users() {
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -161,7 +162,7 @@ export function Users() {
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600">Manage system users and their permissions</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button onClick={() => setShowCreateModal(true)} tooltip="Add a new user">
           <Plus className="mr-2 h-4 w-4" />
           Add User
         </Button>
@@ -246,6 +247,7 @@ export function Users() {
                           variant="outline"
                           size="sm"
                           onClick={() => setEditingUser(user)}
+                          tooltip="Edit user details"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -253,6 +255,7 @@ export function Users() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleResetPassword(user)}
+                          tooltip="Reset user password"
                         >
                           <Key className="h-4 w-4" />
                         </Button>
@@ -287,6 +290,7 @@ export function Users() {
                           variant="danger"
                           size="sm"
                           onClick={() => handleDeleteUser(user)}
+                          tooltip="Delete user"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -360,6 +364,7 @@ export function Users() {
                     type="button"
                     variant="outline"
                     onClick={() => setShowCreateModal(false)}
+                    tooltip="Close dialog"
                   >
                     Cancel
                   </Button>
@@ -459,6 +464,7 @@ export function Users() {
                     type="button"
                     variant="outline"
                     onClick={() => setEditingUser(null)}
+                    tooltip="Close dialog"
                   >
                     Cancel
                   </Button>
@@ -487,7 +493,9 @@ export function Users() {
                 <ClipboardCopy className="h-4 w-4 mr-1" /> Copy
               </Button>
             </div>
-            <Button type="button" onClick={() => setResetPasswordModal(null)} className="w-full mt-2">Close</Button>
+            <Button type="button" onClick={() => setResetPasswordModal(null)} className="w-full mt-2" tooltip="Close dialog">
+              Close
+            </Button>
           </div>
         </Dialog>
       )}

@@ -1,14 +1,16 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react'
 import { cn } from '../../lib/utils'
+import { Tooltip } from './Tooltip'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'outline'
   size?: 'sm' | 'md' | 'lg'
+  tooltip?: string
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', ...props }, ref) => {
-    return (
+  ({ className, variant = 'primary', size = 'md', tooltip, ...props }, ref) => {
+    const btn = (
       <button
         className={cn(
           'btn',
@@ -27,6 +29,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       />
     )
+    return tooltip ? <Tooltip title={tooltip}>{btn}</Tooltip> : btn
   }
 )
 Button.displayName = 'Button'
