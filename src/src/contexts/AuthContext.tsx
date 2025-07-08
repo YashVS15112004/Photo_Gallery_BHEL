@@ -58,10 +58,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await api.get('/auth/me');
       setUser(response.data.user);
     } catch (error) {
-      localStorage.removeItem('token');
-      setUser(null);
+    localStorage.removeItem('token');
+    setUser(null);
     } finally {
-      setIsLoading(false);
+    setIsLoading(false);
     }
   };
 

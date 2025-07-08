@@ -8,6 +8,7 @@ import { formatDate } from '../lib/utils'
 import api from '../lib/api'
 import { ActivityLog } from '../types'
 import toast from 'react-hot-toast'
+import * as XLSX from 'xlsx';
 
 export function ActivityLogs() {
   const queryClient = useQueryClient();
@@ -69,8 +70,23 @@ export function ActivityLogs() {
   };
 
   const handleExport = () => {
-    // In a real implementation, this would trigger a download
-    toast.success('Export functionality would be implemented here')
+    if (!logs || logs.length === 0) {
+      toast.error('No logs to export');
+      return;
+    }
+    // Prepare data for Excel
+    const exportData = logs.map((log: ActivityLog) => ({
+      Timestamp: formatDate(log.timestamp),
+      User: log.user?.username || log.user || '',
+      Action: log.action,
+      Resource: log.resource,
+      Details: log.details,
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Activity Logs');
+    XLSX.writeFile(workbook, 'activity_logs.xlsx');
+    toast.success('Logs exported as Excel file');
   }
 
   const handleClearLogs = async () => {

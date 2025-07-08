@@ -69,7 +69,7 @@ export function LoginForm() {
                 disabled={isLoading}
               />
               
-              <div className="relative">
+              <div className="relative mt-2">
                 <Input
                   label="Password"
                   type={showPassword ? 'text' : 'password'}
@@ -77,6 +77,7 @@ export function LoginForm() {
                   error={errors.password?.message}
                   placeholder="Enter your password"
                   disabled={isLoading}
+                  className="pr-10" // Add right padding for eye icon
                 />
                 <button
                   type="button"

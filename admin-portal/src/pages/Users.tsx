@@ -8,12 +8,14 @@ import { formatDate } from '../lib/utils'
 import api from '../lib/api'
 import { User, CreateUserData, UpdateUserData } from '../types'
 import toast from 'react-hot-toast'
+import { Dialog } from '../components/ui/Dialog';
 
 export function Users() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [showPassword, setShowPassword] = useState<string | null>(null)
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
+  const [resetPasswordModal, setResetPasswordModal] = useState<{ open: boolean, username: string, password: string } | null>(null);
   const queryClient = useQueryClient()
 
   const { data: users, isLoading } = useQuery({
@@ -85,8 +87,14 @@ export function Users() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: (id: string) => api.post(`/admin/users/${id}/reset-password`),
-    onSuccess: (data) => {
-      toast.success(`Password reset successfully. New password: ${data.data.newPassword}`)
+    onSuccess: (data, variables, context) => {
+      const user = users?.find((u: User) => u._id === context);
+      setResetPasswordModal({
+        open: true,
+        username: user?.username || '',
+        password: data.data.newPassword,
+      });
+      toast.success('Password reset successfully!');
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to reset password')
@@ -134,7 +142,7 @@ export function Users() {
 
   const handleResetPassword = (user: User) => {
     if (window.confirm(`Are you sure you want to reset password for user "${user.username}"?`)) {
-      resetPasswordMutation.mutate(user._id)
+      resetPasswordMutation.mutate(user._id, { context: user._id });
     }
   }
 
@@ -459,6 +467,29 @@ export function Users() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {resetPasswordModal?.open && (
+        <Dialog open={resetPasswordModal.open} onClose={() => setResetPasswordModal(null)}>
+          <div className="p-6">
+            <h2 className="text-lg font-bold mb-2">Password Reset</h2>
+            <p className="mb-2">The new password for <span className="font-mono">{resetPasswordModal.username}</span> is:</p>
+            <div className="flex items-center mb-4">
+              <span className="font-mono bg-gray-100 px-3 py-1 rounded text-lg select-all mr-2">{resetPasswordModal.password}</span>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  navigator.clipboard.writeText(resetPasswordModal.password);
+                  toast.success('Password copied to clipboard!');
+                }}
+              >
+                <ClipboardCopy className="h-4 w-4 mr-1" /> Copy
+              </Button>
+            </div>
+            <Button type="button" onClick={() => setResetPasswordModal(null)} className="w-full mt-2">Close</Button>
+          </div>
+        </Dialog>
       )}
     </div>
   )

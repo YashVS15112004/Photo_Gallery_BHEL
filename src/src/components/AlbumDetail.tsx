@@ -85,14 +85,14 @@ const AlbumDetail: React.FC = () => {
         setOffset(prev => prev + albumData.images.length);
         setHasMore(more);
       }
-    } catch (err) {
-      setError('Failed to load album');
-      console.error('Error fetching album:', err);
-    } finally {
-      setIsLoading(false);
+      } catch (err) {
+        setError('Failed to load album');
+        console.error('Error fetching album:', err);
+      } finally {
+        setIsLoading(false);
       setIsLoadingMore(false);
-    }
-  };
+      }
+    };
 
   useEffect(() => {
     if (id) fetchImagesBatch(0);
@@ -177,31 +177,31 @@ const AlbumDetail: React.FC = () => {
 
   // Only show the slideshow modal (lightbox) as the main/default view
   return (
-    <Dialog
+      <Dialog
       open={true}
       onClose={() => navigate(-1)}
-      maxWidth={false}
-      fullWidth
-      PaperProps={{
-        sx: {
-          bgcolor: 'rgba(0, 0, 0, 0.9)',
-          boxShadow: 'none',
-          borderRadius: 0,
-        },
-      }}
-    >
+        maxWidth={false}
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(0, 0, 0, 0.9)',
+            boxShadow: 'none',
+            borderRadius: 0,
+          },
+        }}
+      >
       <DialogContent sx={{ p: 0, position: 'relative', overflow: 'hidden' }}>
         {images.length > 0 && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '80vh',
-              position: 'relative',
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '80vh',
+                position: 'relative',
               flexDirection: 'column',
-            }}
-          >
+              }}
+            >
             <Box sx={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh', paddingTop: '64px' }}>
               <img
                 ref={imageRef}
@@ -364,11 +364,11 @@ const AlbumDetail: React.FC = () => {
                   <Skeleton variant="rectangular" width={60} height={40} />
                 </Box>
               )}
+              </Box>
             </Box>
-          </Box>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
   );
 };
 
