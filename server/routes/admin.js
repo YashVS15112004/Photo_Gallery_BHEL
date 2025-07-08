@@ -282,9 +282,8 @@ router.post('/users/:id/reset-password', adminAuth, logUserActivity('update', 'R
     // Generate random password
     const newPassword = Math.random().toString(36).substring(2, 15);
     
-    // Hash and update password
-    const salt = await bcrypt.genSalt(12);
-    user.password = await bcrypt.hash(newPassword, salt);
+    // Set plain password, let pre-save hook hash it
+    user.password = newPassword;
     await user.save();
 
     res.json({
