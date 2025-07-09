@@ -10,6 +10,7 @@ import { User, CreateUserData, UpdateUserData } from '../types'
 import toast from 'react-hot-toast'
 import { Dialog } from '../components/ui/Dialog';
 import { Tooltip } from '../components/ui/Tooltip';
+import * as XLSX from 'xlsx';
 
 export function Users() {
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -147,6 +148,22 @@ export function Users() {
     }
   }
 
+  const handleExportUsers = () => {
+    if (!users || users.length === 0) return;
+    const exportData = users.map((user: User) => ({
+      Username: user.username,
+      Email: user.email,
+      Role: user.role,
+      Status: user.isAuthorized ? 'Authorized' : 'Pending',
+      Created: formatDate(user.createdAt),
+      LastLogin: user.lastLogin ? formatDate(user.lastLogin) : 'Never',
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+    XLSX.writeFile(workbook, 'users.xlsx');
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -159,13 +176,19 @@ export function Users() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600">Manage system users and their permissions</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">User Management</h1>
+          <p className="text-gray-600 dark:text-gray-300">Manage system users and their permissions</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} tooltip="Add a new user">
-          <Plus className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleExportUsers} tooltip="Export users to Excel">
+            <ClipboardCopy className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)} tooltip="Add a new user">
+            <Plus className="mr-2 h-4 w-4" />
+            Add User
+          </Button>
+        </div>
       </div>
 
       {/* Users Table */}
@@ -175,43 +198,43 @@ export function Users() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Last Login
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface dark:bg-surface-dark divide-y divide-gray-200 dark:divide-gray-700">
                 {paginatedUsers.map((user: User) => (
-                  <tr key={user._id}>
+                  <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{user.username}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.username}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         user.role === 'admin' 
-                          ? 'bg-purple-100 text-purple-800' 
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
                       }`}>
                         {user.role}
                       </span>
@@ -219,8 +242,8 @@ export function Users() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
                         user.isAuthorized 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                       }`}>
                         {user.isAuthorized ? (
                           <>
@@ -235,10 +258,10 @@ export function Users() {
                         )}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {formatDate(user.createdAt)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {user.lastLogin ? formatDate(user.lastLogin) : 'Never'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -307,15 +330,15 @@ export function Users() {
       {/* Add pagination controls below the table */}
       <div className="flex justify-center items-center mt-4 space-x-2">
         <button
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+          className="px-3 py-1 rounded bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 disabled:opacity-50 transition-colors"
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={currentPage === 1}
         >
           {'<'}
         </button>
-        <span className="mx-2 text-sm">Page {currentPage} of {totalPages}</span>
+        <span className="mx-2 text-sm dark:text-gray-300">Page {currentPage} of {totalPages}</span>
         <button
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+          className="px-3 py-1 rounded bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 disabled:opacity-50 transition-colors"
           onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           disabled={currentPage === totalPages}
         >
@@ -348,7 +371,7 @@ export function Users() {
                   defaultValue=""
                 />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Role
                   </label>
                   <select name="role" className="input">
@@ -387,10 +410,10 @@ export function Users() {
                 <div className="text-lg font-semibold">Credentials</div>
                 <div className="flex flex-col items-center justify-center space-y-2">
                   <div className="flex items-center space-x-2">
-                    <span className="font-mono px-3 py-2 bg-gray-100 rounded text-lg select-all">Username: {showPassword}</span>
+                    <span className="font-mono px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded text-lg select-all dark:text-gray-100">Username: {showPassword}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="font-mono px-3 py-2 bg-gray-100 rounded text-lg select-all">Password: {generatedPassword}</span>
+                    <span className="font-mono px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded text-lg select-all dark:text-gray-100">Password: {generatedPassword}</span>
                     <Button
                       variant="outline"
                       size="sm"

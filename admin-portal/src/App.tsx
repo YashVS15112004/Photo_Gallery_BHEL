@@ -5,6 +5,7 @@ import { LoginForm } from './components/LoginForm'
 import { Users } from './pages/Users'
 import { Albums } from './pages/Albums'
 import { ActivityLogs } from './pages/ActivityLogs'
+import { ThemeProvider } from './hooks/useTheme'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth()
@@ -47,9 +48,11 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 
